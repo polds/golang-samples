@@ -93,10 +93,30 @@ func TestSample(t *testing.T) {
 		t.Errorf("got output %q; wanted it to contain 2 occurences of Total Junk", out)
 	}
 
-	// Wait at least 10 seconds since the write.
-	time.Sleep(time.Now().Add(11 * time.Second).Sub(writeTime))
+	// Wait at least 15 seconds since the write.
+	time.Sleep(time.Now().Add(16 * time.Second).Sub(writeTime))
 	out = runCommand(t, "readstaledata", dbName)
 	assertContains(out, "Go, Go, Go")
 	assertContains(out, "Forever Hold Your Peace")
 	assertContains(out, "Green")
+
+	assertContains(runCommand(t, "readbatchdata", dbName), "1 Marc Richards")
+
+	runCommand(t, "addcommittimestamp", dbName)
+	runCommand(t, "updatewithtimestamp", dbName)
+	out = runCommand(t, "querywithtimestamp", dbName)
+	assertContains(out, "1000000")
+
+	runCommand(t, "createtabledocswithtimestamp", dbName)
+	runCommand(t, "writetodocstable", dbName)
+	runCommand(t, "updatedocstable", dbName)
+
+	assertContains(runCommand(t, "querydocstable", dbName), "Hello World 1 Updated")
+
+	runCommand(t, "createtabledocswithhistorytable", dbName)
+	runCommand(t, "writewithhistory", dbName)
+	runCommand(t, "updatewithhistory", dbName)
+
+	out = runCommand(t, "querywithhistory", dbName)
+	assertContains(out, "1 1 Hello World 1 Updated")
 }

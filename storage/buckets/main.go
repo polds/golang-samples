@@ -78,7 +78,7 @@ func main() {
 	}
 
 	// delete the bucket
-	if err := delete(client, name); err != nil {
+	if err := deleteBucket(client, name); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("deleted bucket: %v\n", name)
@@ -127,7 +127,7 @@ func list(client *storage.Client, projectID string) ([]string, error) {
 	return buckets, nil
 }
 
-func delete(client *storage.Client, bucketName string) error {
+func deleteBucket(client *storage.Client, bucketName string) error {
 	ctx := context.Background()
 	// [START delete_bucket]
 	if err := client.Bucket(bucketName).Delete(ctx); err != nil {
@@ -195,5 +195,46 @@ func removeUser(c *storage.Client, bucketName string) error {
 	// being modified concurrently. SetPolicy will return an error if the policy
 	// was modified since it was retrieved.
 	// [END remove_bucket_iam_member]
+	return nil
+}
+
+func enableRequesterPays(c *storage.Client, bucketName string) error {
+	ctx := context.Background()
+
+	// [START enable_requester_pays]
+	bucket := c.Bucket(bucketName)
+	if _, err := bucket.Update(ctx, storage.BucketAttrsToUpdate{
+		RequesterPays: true,
+	}); err != nil {
+		return err
+	}
+	// [END enable_requester_pays]
+	return nil
+}
+
+func disableRequesterPays(c *storage.Client, bucketName string) error {
+	ctx := context.Background()
+
+	// [START disable_requester_pays]
+	bucket := c.Bucket(bucketName)
+	if _, err := bucket.Update(ctx, storage.BucketAttrsToUpdate{
+		RequesterPays: false,
+	}); err != nil {
+		return err
+	}
+	// [END disable_requester_pays]
+	return nil
+}
+
+func checkRequesterPays(c *storage.Client, bucketName string) error {
+	ctx := context.Background()
+
+	// [START get_requester_pays_status]
+	attrs, err := c.Bucket(bucketName).Attrs(ctx)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Is requester pays enabled? %v\n", attrs.RequesterPays)
+	// [END get_requester_pays_status]
 	return nil
 }

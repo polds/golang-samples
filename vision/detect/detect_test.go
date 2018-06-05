@@ -32,10 +32,15 @@ func TestDetect(t *testing.T) {
 		{"Text", detectText, detectTextURI, "text.jpg", "Preparing to install"},
 		{"FullText", detectDocumentText, detectDocumentTextURI, "text.jpg", "Preparing to install"},
 		{"Crop", detectCropHints, detectCropHintsURI, "wakeupcat.jpg", "(0,0)"},
-		{"Web", detectWeb, detectWebURI, "wakeupcat.jpg", "Whiskers"},
+		{"Web", detectWeb, detectWebURI, "wakeupcat.jpg", "Web properties"},
+		{"WebGeo", nil, detectWebGeoURI, "city.jpg", "Entities"},
 	}
 
 	for _, tt := range tests {
+		if tt.local == nil {
+			continue
+		}
+
 		var buf bytes.Buffer
 		err := tt.local(&buf, "../testdata/"+tt.path)
 		if err != nil {

@@ -12,14 +12,20 @@
 // `	var client *vision.Client // Boilerplate is inserted by gen.go`
 package main
 
+// [START imports]
 import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
+
+	"golang.org/x/net/context"
 
 	vision "cloud.google.com/go/vision/apiv1"
-	"golang.org/x/net/context"
+	visionpb "google.golang.org/genproto/googleapis/cloud/vision/v1"
 )
+
+// [END imports]
 
 func init() {
 	// Refer to these functions so that goimports is happy before boilerplate is inserted.
@@ -109,6 +115,8 @@ func detectText(w io.Writer, file string) error {
 	return nil
 }
 
+// [START vision_detect_document{REGION_TAG_PARAMETER}]
+
 // detectDocumentText gets the full document text from the Vision API for an image at the given file path.
 func detectDocumentText(w io.Writer, file string) error {
 	var client *vision.ImageAnnotatorClient // Boilerplate is inserted by gen.go
@@ -120,12 +128,36 @@ func detectDocumentText(w io.Writer, file string) error {
 	if annotation == nil {
 		fmt.Fprintln(w, "No text found.")
 	} else {
-		fmt.Fprintln(w, "Text:")
+		fmt.Fprintln(w, "Document Text:")
 		fmt.Fprintf(w, "%q\n", annotation.Text)
+
+		fmt.Fprintln(w, "Pages:")
+		for _, page := range annotation.Pages {
+			fmt.Fprintf(w, "\tConfidence: %f, Width: %d, Height: %d\n", page.Confidence, page.Width, page.Height)
+			fmt.Fprintln(w, "\tBlocks:")
+			for _, block := range page.Blocks {
+				fmt.Fprintf(w, "\t\tConfidence: %f, Block type: %v\n", block.Confidence, block.BlockType)
+				fmt.Fprintln(w, "\t\tParagraphs:")
+				for _, paragraph := range block.Paragraphs {
+					fmt.Fprintf(w, "\t\t\tConfidence: %f", paragraph.Confidence)
+					fmt.Fprintln(w, "\t\t\tWords:")
+					for _, word := range paragraph.Words {
+						symbols := make([]string, len(word.Symbols))
+						for i, s := range word.Symbols {
+							symbols[i] = s.Text
+						}
+						wordText := strings.Join(symbols, "")
+						fmt.Fprintf(w, "\t\t\t\tConfidence: %f, Symbols: %s\n", word.Confidence, wordText)
+					}
+				}
+			}
+		}
 	}
 
 	return nil
 }
+
+// [END vision_detect_document{REGION_TAG_PARAMETER}]
 
 // detectProperties gets image properties from the Vision API for an image at the given file path.
 func detectProperties(w io.Writer, file string) error {
@@ -165,6 +197,8 @@ func detectCropHints(w io.Writer, file string) error {
 	return nil
 }
 
+// [START vision_detect_safe_search{REGION_TAG_PARAMETER}]
+
 // detectSafeSearch gets image properties from the Vision API for an image at the given file path.
 func detectSafeSearch(w io.Writer, file string) error {
 	var client *vision.ImageAnnotatorClient // Boilerplate is inserted by gen.go
@@ -176,11 +210,16 @@ func detectSafeSearch(w io.Writer, file string) error {
 	fmt.Fprintln(w, "Safe Search properties:")
 	fmt.Fprintln(w, "Adult:", props.Adult)
 	fmt.Fprintln(w, "Medical:", props.Medical)
+	fmt.Fprintln(w, "Racy:", props.Racy)
 	fmt.Fprintln(w, "Spoofed:", props.Spoof)
 	fmt.Fprintln(w, "Violence:", props.Violence)
 
 	return nil
 }
+
+// [END vision_detect_safe_search{REGION_TAG_PARAMETER}]
+
+// [START vision_detect_web{REGION_TAG_PARAMETER}]
 
 // detectWeb gets image properties from the Vision API for an image at the given file path.
 func detectWeb(w io.Writer, file string) error {
@@ -209,9 +248,44 @@ func detectWeb(w io.Writer, file string) error {
 			fmt.Fprintf(w, "\t\t%-12s %s\n", entity.EntityId, entity.Description)
 		}
 	}
+	if len(web.BestGuessLabels) != 0 {
+		fmt.Fprintln(w, "\tBest guess labels:")
+		for _, label := range web.BestGuessLabels {
+			fmt.Fprintf(w, "\t\t%s\n", label.Label)
+		}
+	}
 
 	return nil
 }
+
+// [END vision_detect_web{REGION_TAG_PARAMETER}]
+
+// [START vision_web_entities_include_geo_results{REGION_TAG_PARAMETER}]
+
+// detectWebGeo detects geographic metadata from the Vision API for an image at the given file path.
+func detectWebGeo(w io.Writer, file string) error {
+	var client *vision.ImageAnnotatorClient // Boilerplate is inserted by gen.go
+	imageContext := &visionpb.ImageContext{
+		WebDetectionParams: &visionpb.WebDetectionParams{
+			IncludeGeoResults: true,
+		},
+	}
+	web, err := client.DetectWeb(ctx, image, imageContext)
+	if err != nil {
+		return err
+	}
+
+	if len(web.WebEntities) != 0 {
+		fmt.Fprintln(w, "Entities:")
+		for _, entity := range web.WebEntities {
+			fmt.Fprintf(w, "\t%-12s %s\n", entity.EntityId, entity.Description)
+		}
+	}
+
+	return nil
+}
+
+// [END vision_web_entities_include_geo_results{REGION_TAG_PARAMETER}]
 
 // detectLogos gets logos from the Vision API for an image at the given file path.
 func detectLogos(w io.Writer, file string) error {
